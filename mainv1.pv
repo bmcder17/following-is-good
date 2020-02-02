@@ -1,0 +1,115 @@
+# Funcitoning bang-bang controller
+
+#!/usr/bin/env pybricks-micropython
+
+from pybricks import ev3brick as brick
+from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
+                                 InfraredSensor, UltrasonicSensor, GyroSensor)
+from pybricks.parameters import (Port, Stop, Direction, Button, Color,
+                                 SoundFile, ImageFile, Align)
+from pybricks.tools import print, wait, StopWatch
+from pybricks.robotics import DriveBase
+import utime, array
+from pybricks.ev3devio import Ev3devSensor
+
+class EV3Sensor(Ev3devSensor):
+    _ev3dev_driver_name='ev3-analog-01'
+    def read(self):
+        self._mode('ANALOG')
+        return self._value(0)
+
+# this is a hack to set the mode properly
+from ev3dev2.port import LegoPort
+s = LegoPort(address ='ev3-ports:in1')
+s.mode = 'ev3-analog'
+utime.sleep(0.5)
+
+
+# Write your program here
+brick.sound.beep()
+
+# testing
+#sensor=EV3Sensor(Port.S1) # same port as above
+# higher value means brighter, lower value means darker
+#while True:
+#    print(sensor.read())
+#    wait(2000)
+
+# Plan:
+# Start with a bang-bang controller
+# Attempt proportional controller
+# Attempt proportional-derivative controller
+
+# bang-bang
+left_sensor = EV3Sensor(Port.S1)
+right_sensor = EV3Sensor(Port.S4)
+left_motor = Motor(Port.A, Direction.COUNTERCLOCKWISE) 
+right_motor = Motor(Port.D, Direction.COUNTERCLOCKWISE)
+wheelDiameter = 56
+wheelBase = 175
+car = DriveBase(left_motor, right_motor, wheelDiameter, wheelBase)
+speed = 200
+turn_speed = 120
+left_val = left_sensor.read()
+right_val = right_sensor.read()
+tolerance_range = 50
+calibrate_val = 250 # L/R? L
+total = 0
+run = True
+count = 0
+while run and (count < 1000):
+    left_val = left_sensor.read() + calibrate_val
+    right_val = right_sensor.read() 
+    if (left_val > (right_val + tolerance_range)):
+        #turn right
+        car.drive(speed, turn_speed)
+        print("right")
+        pass
+        
+    elif (left_val < (right_val - tolerance_range)):
+        #turn left
+        car.drive(speed, -turn_speed)
+        print("left")
+        pass
+        
+    else:
+        #drive forward
+        car.drive(speed, 0)
+        print("forward")
+        pass
+
+    if any (brick.buttons()):
+        run = False
+    #total = total + (left_val - right_val)
+    #count = count + 1
+    print("left: " + str(left_val) + " right: " + str(right_val))
+    #wait(10)
+
+# print(total/1000)
+# proportional
+# p eq: Pout = k_p * e(t) + p0
+# k_p-proportional gain, e(t)-instantaneous process error at time t = SP - PV
+# Sp-set point, PV-process variable
+"""
+desired = 100
+def controller(currspeed):
+    position = distance.distance()
+    
+    error = position - desired
+    k_p = 0.5 #change as needed
+    speed = currspeed*(error*k_p)
+    return(speed)
+
+run = True
+distance = UltrasonicSensor(Port.S2)
+rightmotor = Moor(Port.D)
+leftmotor = Motor(Port.A)
+currspeed = 0
+while run:
+    newspeed = controller(currspeed)
+    leftmotor.run(newspeed)
+    rightmotor.run(newspeed)
+    if (newspeed == 0 or any brick.buttons()):
+        run = False
+    
+"""
